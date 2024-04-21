@@ -1,61 +1,49 @@
-const axios = require('axios');
-const fs = require('fs');
- 
 module.exports = {
   config: {
-    name: 'imagine2',
-    version: '1.0',
-    author: 'gojoxrimon || js',
-    countDown: 0,
-    role: 0,
+    name: "imagine2",
+    version: "1.0",
+    author: "ArYAN",
+    countDown: 5,
+    category: "media",
     longDescription: {
-      en: 'anime image gen'
+      en: 'Genreate Images using imagine API',
     },
-    category: 'ai',
     guide: {
-      en: 'Niji v3/4'
+      en: '.imagine [ prompt ] | [ model ] '
     }
   },
- 
-  onStart: async function ({ message, args, event, api }) {
+  onStart: async function ({ message, api, args, event }) {
+    const text = args.join(' ');
+    if (!text) {
+      return message.reply("⛔|𝗜𝗻𝘃𝗮𝗹𝗶𝗱 \n━━━━━━━━━━━━\n\n➤ Please provide some prompts");
+    }
+
+    const baseURL = `https://ai-technology.onrender.com/api/imagine?prompt=${text}`;
+
+    api.setMessageReaction("⏳", event.messageID, () => {}, true);
+
+    const startTime = new Date().getTime(); // Define startTime
+
     try {
-      const info = args.join(' ');
-      const [prompt] = info.split('|').map(item => item.trim());
-      const text = args.join(" ");
-      if (!text) {
-        return message.reply("❎ | Please provide a prompt");
-      }
-      const modelParam = '1'; // Utilisation du premier modèle uniquement
-      const apiUrl = `https://turtle-apis.onrender.com/api/sdxl?prompt=${prompt}&model=${modelParam}`;
- 
-      const startTime = new Date(); // Heure de début de la génération d'images
- 
-      await message.reply('wait for magic to be unfold');
- 
-      const form = {};
-      form.attachment = [];
- 
-      // Générer quatre images
-      for (let i = 0; i < 4; i++) {
-        const response = await global.utils.getStreamFromURL(apiUrl);
-        form.attachment.push(response);
-      }
- 
-      const endTime = new Date(); // Heure de fin de la génération d'images
-      const duration = (endTime - startTime) / 1000; // Durée en secondes
- 
-      // Créer le message d'attachement avec le nombre de secondes
-      const attachmentMessage = `"here is your generated images" 🎨 (${duration} secondes)`;
- 
-      // Envoyer les quatre images avec le message d'attachement
-      await api.sendMessage({
-        body: attachmentMessage,
-        attachment: form.attachment
-      }, event.threadID);
- 
+      const response = await axios.get(baseURL);
+
+      const endTime = new Date().getTime(); // Move endTime inside the asynchronous block
+      const timeTaken = (endTime - startTime) / 1000; 
+
+      message.reply("🔎 Creating\n\n➤ Generating your image, please wait a few moments.", async (err, info) => {
+        message.reply({ 
+          body: `🖼 [ 𝗜𝗠𝗔𝗚𝗜𝗡𝗘 ]\n\n➤ Here is your generated image.\n➤ Time taken: ${timeTaken} seconds`,
+          attachment: await global.utils.getStreamFromURL(baseURL)
+      });
+
+        let ui = info.messageID;
+        message.unsend(ui);
+        api.setMessageReaction("✅", event.messageID, () => {}, true);
+      });
     } catch (error) {
-      console.error(error);
-      await message.reply('❎ | Sorry, API has a skill issue');
+      console.error("Error fetching image:", error);
+      message.reply("⚠ An error occurred while generating the image.");
+      api.setMessageReaction("❌", event.messageID, () => {}, true);
     }
   }
 };
